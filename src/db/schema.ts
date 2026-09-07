@@ -34,7 +34,7 @@ export const payrollCycles = sqliteTable('payroll_cycles', {
 export const payItems = sqliteTable('pay_items', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   payrollCycleId: integer('payroll_cycle_id').notNull().references(() => payrollCycles.id),
-  employeeId: integer('employee_id').notNull(),
+  employeeId: integer('employee_id').notNull(), // missing .references(() => employees.id) — no FK, see review H1
   type: text('type').notNull(),
   amount: real('amount').notNull(),
   currency: text('currency').notNull(),

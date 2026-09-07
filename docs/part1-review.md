@@ -126,6 +126,18 @@ The query result is never assigned or used. The comment ("attribute this line it
 
 ---
 
+## Status after Part 2
+
+Part 2 (Option A) touched `src/report.ts`, which changed the status of some findings from this review. Nothing else in this document was edited after Part 2 — it still reflects the original audit.
+
+- **C2** — Resolved. Fixed as part of Part 2, see [part2-notes.md](part2-notes.md).
+- **C3** — Partially mitigated. Output is now rounded to 2 decimals; the underlying float storage is unchanged.
+- **M2** — Partially resolved. The `buildGlobalSummary` side no longer has this pattern; `getPayItemsByCycle` in `server.ts` still does, it was out of scope for the chosen Part 2 option.
+- **M3** — Resolved. The dead lookup no longer exists after `report.ts` was rewritten.
+- **C1, H1, H2, M1, L1, L2** — Open, unchanged by Part 2.
+
+---
+
 ## Summary — what I'd fix first
 
 If I owned this starting Monday: **C1 (SQL injection)** first, it's a live security hole with no upside to leaving it. Then **C2 and C3 together** (currency mixing + float arithmetic) before the next payroll run touches Finance's summary — both corrupt the one number this service exists to produce, silently. **H1** and **H2** next, since they're data-integrity and approval-immutability gaps that get worse the longer they're left. The rest (M1-M3, L1-L2) are real but not urgent.
