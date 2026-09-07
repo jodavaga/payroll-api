@@ -69,12 +69,14 @@ describe('payroll-api routes (E6-E9)', () => {
     expect(body.every((r: any) => r.amount >= 3000)).toBe(true);
   });
 
-  it('E9 GET /reports/global-summary returns totals', async () => {
+  it('E9 GET /reports/global-summary returns totals broken down by currency', async () => {
     const res = await app.request('/reports/global-summary');
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toHaveProperty('totalEarnings');
-    expect(body).toHaveProperty('totalDeductions');
-    expect(body).toHaveProperty('totalEmployerCost');
+    expect(body).toHaveProperty('byCurrency');
+    // EUR is present in the seed data and unaffected by amount fields other tests touch.
+    expect(body.byCurrency.EUR).toHaveProperty('totalEarnings');
+    expect(body.byCurrency.EUR).toHaveProperty('totalDeductions');
+    expect(body.byCurrency.EUR).toHaveProperty('totalEmployerCost');
   });
 });
