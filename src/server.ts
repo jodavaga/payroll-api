@@ -21,6 +21,15 @@ app.get('/countries/:code/pay-groups', (c) => {
   return c.json(rows);
 });
 
+// Re-written to use same style as above (GET /countries):
+// app.get('/countries/:code/pay-groups', async (c) => {
+//   const code = c.req.param('code');
+//   const rows = await db.query.payGroups.findMany({
+//     where: eq(payGroups.countryCode, code),
+//   });
+//   return c.json(rows);
+// });
+
 // Create a payroll cycle (optionally with initial pay items).
 app.post('/payroll-cycles', (c) => {
   return (async () => {
@@ -65,19 +74,20 @@ app.get('/payroll-cycles/:id', (c) => {
 // Approve a payroll cycle.
 app.post('/payroll-cycles/:id/approve', (c) => {
   const id = Number(c.req.param('id'));
-  db.update(payrollCycles).set({ status: 'approved' }).where(eq(payrollCycles.id, id)).run();
-  const row = db.select().from(payrollCycles).where(eq(payrollCycles.id, id)).get();
-  return c.json({ id: row!.id, status: row!.status });
+  db.update(payrollCycles).set({ status: 'approved' }).where(eq(payrollCycles.id, id)).run(); // PayrollCycle might not exist and status its not being validated first.
+  const row = db.select().from(payrollCycles).where(eq(payrollCycles.id, id)).get(); // id might not exist.
+  return c.json({ id: row!.id, status: row!.status }); // a non-null assertion on row that might be null.
 });
 
 const { employees } = schema;
 
 // List pay items for a cycle, with employee names.
-app.get('/getPayItemsByCycle', (c) => {
+app.get('/getPayItemsByCycle', (c) => { // Different convention to get payrollCylcle. It should be REST style (/payroll-cycles/:id/pay-items)
   const cycleId = Number(c.req.query('cycleId'));
   const items = db.select().from(payItems).where(eq(payItems.payrollCycleId, cycleId)).all();
-  const out = items.map((item) => {
+  const out = items.map((item) => { // N+1 issue (with 100 oay items it will be 101 requests instead of 1)
     const emp = db.select().from(employees).where(eq(employees.id, item.employeeId)).get();
+    // Return snake_case style, however the others are camelCase (minor style inconsistency) 
     return {
       pay_item_id: item.id,
       employee_name: emp?.name ?? null,
@@ -95,6 +105,7 @@ app.post('/pay-items', (c) => {
     const body = await c.req.json();
     const inserted = db
       .insert(payItems)
+      // payrollCycleId and employeeId not getting validated first whether they exist.
       .values({
         payrollCycleId: body.payrollCycleId,
         employeeId: body.employeeId,
@@ -113,11 +124,13 @@ app.get('/pay-items', (c) => {
   const sort = c.req.query('sort') ?? 'id';
   const minAmount = c.req.query('minAmount');
 
+  // Why not using Drizzle as the others? forming SQL by hand not a good practice
   const conditions =
     minAmount !== undefined
       ? sql`WHERE ${payItems.amount} >= ${Number(minAmount)}`
       : sql``;
 
+  // sql.raw(sort) might have SQL Injection (WARNING!)
   const rows = db.all(
     sql`SELECT * FROM ${payItems} ${conditions} ORDER BY ${sql.raw(sort)}`
   );
